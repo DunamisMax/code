@@ -24,11 +24,3 @@ This repository is where I document my progress and practice as I learn the C pr
 
 * I'm open to feedback and suggestions as I learn.
 * Feel free to use any of the code here for your own learning purposes!
-
-## Let's connect!
-
-[Optional: Add your preferred way for others to reach you if you'd like]
-
-## How to Contribute
-
-This is primarily a personal learning project, but if you'd like to offer constructive feedback or point out useful resources, please feel free to open an issue or submit a pull request.
