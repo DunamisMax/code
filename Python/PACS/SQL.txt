@@ -1,0 +1,15 @@
+-- Table: studies
+CREATE TABLE studies (
+    study_id INTEGER PRIMARY KEY AUTOINCREMENT,  -- Unique identifier for each study
+    patient_name TEXT,  -- Patient's name 
+    study_date DATE,    -- Date the study was performed
+    modality TEXT       -- Imaging modality (CT, MRI, Ultrasound, etc.)
+);
+
+-- Table: images
+CREATE TABLE images (
+    image_id INTEGER PRIMARY KEY AUTOINCREMENT,  -- Unique identifier for each image
+    study_id INTEGER,                            -- Reference to the parent study
+    file_path TEXT,                              -- Path to the DICOM file
+    FOREIGN KEY (study_id) REFERENCES studies(study_id) -- Enforce referential integrity
+);

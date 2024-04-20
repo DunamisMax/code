@@ -1,0 +1,86 @@
+Absolutely! Here's a project guide for building a foundational DICOM PACS viewer and database using Python. Keep in mind that a full-fledged PACS is quite complex, so this will focus on core elements to get you started.
+
+**Project Structure**
+
+```
+dicom_pacs/
+    ├── viewer.py               # Main script for the viewer application
+    ├── database.py             # Database interaction functions
+    ├── dicom_utils.py          # DICOM file processing and network functions 
+    ├── config.py               # Project settings (database credentials, etc.)
+    ├── requirements.txt        # List of Python dependencies
+    └── data/                   # Folder to store sample DICOM images (for testing)
+```
+
+**Technology Choices**
+
+* **DICOM:** pydicom ([https://pydicom.github.io/](https://pydicom.github.io/))
+* **Database:** SQLite (for simplicity, but you could upgrade to PostgreSQL or MySQL)
+* **GUI:** PyQt (flexible GUI framework, another option is Tkinter)
+* **Image Processing:** Pillow (basic), OpenCV (more advanced)
+
+**Step-by-Step Guide**
+
+1. **Setup**
+   * Create a project directory.
+   * Set up a virtual environment (recommended).
+   * `pip install pydicom PyQt5 sqlite3` (plus others you'll need later)
+
+2. **DICOM Handling (`dicom_utils.py`)**
+   * **Loading:**  
+      ```python
+      import pydicom
+
+      def load_dicom_image(file_path):
+          ds = pydicom.dcmread(file_path)
+          return ds
+      ```
+   * **Extracting Key Metadata:**
+      ```python
+      def get_patient_name(ds):
+          return ds.get('PatientName', '')  
+      # ... similar functions for study date, modality, etc.
+      ```
+   * **(Optional) Basic Image Processing:** (use Pillow or OpenCV)
+
+3. **Database (`database.py`)**
+   * **Schema Design:** 
+       * Table: `studies` (study_id, patient_name, study_date, modality, ...)
+       * Table: `images` (image_id, study_id, file_path, ...)
+   * **SQLite Functions:**
+      ```python
+      import sqlite3
+
+      def create_connection():
+          # ... connect to your database
+      
+      def insert_study(conn, study_data):
+          # ... SQL INSERT query 
+      # ... Similar for insert_image, query_studies
+      ```
+
+4. **Viewer GUI (`viewer.py`)**
+   * **Layout (PyQt):**
+      * Image Display Area (Consider a custom widget or using PyQt's graphics capabilities)
+      * Patient/Study List 
+      * Basic Image Controls (Zoom, Pan, Windowing)
+   * **Load Image:**
+      * Connect a "Load DICOM" button to a function that uses `load_dicom_image`
+      * Extract image pixel data from the DICOM dataset and display it.
+   * **Database Integration:**
+       * Display study list from database queries.
+       * Store new images into the database.
+
+5. **Configuration (`config.py`)**
+   * Store database connection strings.
+   * Paths or settings relevant to the project
+
+**Notes and Extensions**
+
+* **Testing:** Get sample DICOM files for development. You can find some online.
+* **DICOM Network:** Explore pydicom's network features to receive images from other modalities.
+* **Optimization:**  Profile your code for image loading and rendering bottlenecks.
+* **Advanced Visualization:** Consider VTK or other 3D visualization libraries.
+* **Web Interface:**  Explore Flask or Django to create a web-based viewer. 
+
+**Let me know which part you'd like to explore in more detail, and I'll provide code snippets and guidance!** 
