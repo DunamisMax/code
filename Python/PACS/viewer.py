@@ -1,14 +1,18 @@
 import sys
 import pydicom
-import logging  # Import logging module
+import config
+import logging
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout, 
                              QFileDialog, QMessageBox)
 from PyQt5.QtGui import QPixmap
+from PIL import Image
+
 
 class DICOMViewer(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Simple DICOM Viewer")
+        self.metadata = None  # Store metadata for potential use 
 
         # UI Elements
         self.image_label = QLabel()
@@ -29,9 +33,10 @@ class DICOMViewer(QMainWindow):
         file_path, _ = QFileDialog.getOpenFileName(self, "Open DICOM File", filter="DICOM Files (*.dcm)")
         if file_path:
             try:
-                metadata = load_dicom_metadata(file_path)
-                self.display_image(metadata['Pixel Data'])
-                self.display_metadata(metadata)
+                self.metadata = load_dicom_metadata(file_path) 
+                self.display_image(self.metadata['PixelData'])  # Assuming 'PixelData' is the correct tag
+                self.display_metadata(self.metadata)
+
             except (pydicom.errors.InvalidDicomError, KeyError, ValueError) as e:
                 self.show_error(f"Error loading DICOM file: {str(e)}")
 
@@ -40,68 +45,60 @@ class DICOMViewer(QMainWindow):
             self.show_error("Error converting image data.")
 
     def convert_pixel_data_to_image(self, pixel_data):
-        """Converts pixel_data to a QPixmap. 
-           Implement your conversion logic here (potentially using Pillow or OpenCV) 
-        """
         try:
-            # Placeholder - Replace this with your image conversion logic 
-            pixmap = QPixmap()
-            pixmap.loadFromData(pixel_data) 
+            image = Image.fromarray(pixel_data)
+
+            if self.metadata and 'WindowCenter' in self.metadata and 'WindowWidth' in self.metadata:
+                image = self.apply_windowing(image, self.metadata['WindowCenter'], self.metadata['WindowWidth'])
+
+            data = image.tobytes("raw", image.mode) 
+            qimage = QImage(data, image.size[0], image.size[1], QImage.Format_RGB888)  # For RGB example
+            pixmap = QPixmap.fromImage(qimage)
+
             self.image_label.setPixmap(pixmap)
-            return True  # Indicate success
+            return True
+
         except Exception as e:
-            logging.error(f"Image conversion error: {str(e)}") 
+            logging.error(f"Image conversion error: {str(e)}")
             return False
 
+    def apply_windowing(self, image, window_center, window_width):
+        """Applies DICOM windowing to a Pillow Image."""
+
+        # Calculate minimum and maximum intensity values based on windowing
+        min_intensity = window_center - window_width // 2
+        max_intensity = window_center + window_width // 2
+
+        # Apply linear scaling with clipping
+        def normalize(value):
+            return min(max(value, min_intensity), max_intensity)
+
+        image = image.point(normalize)
+
+        # Convert to 8-bit grayscale (if not already)
+        if image.mode != 'L': 
+            image = image.convert('L')
+
+        return image
+
     def display_metadata(self, metadata):
-        # ... (Same as before)
+    metadata_text = ""
+    # Example - You can customize what metadata is displayed:
+    for tag, value in metadata.items():
+        if tag in ["PatientName", "PatientID", "Modality", "StudyDate"]: 
+            metadata_text += f"{tag}: {value}\n" 
 
+    self.metadata_display.setText(metadata_text)
+    
     def show_error(self, message):
-        QMessageBox.warning(self, "Error", message)
-        
-    def convert_pixel_data_to_image(self, pixel_data):
-    """Converts DICOM pixel_data to a QPixmap using Pillow (PIL)."""
+    QMessageBox.warning(self, "Error", message)
+    
+    def load_dicom_metadata(file_path):
     try:
-        # Assuming you've extracted the necessary image data from the DICOM file:
-        image = Image.fromarray(pixel_data)  # Create a PIL Image object
-
-        # Potential adjustments for windowing (if needed)
-        if 'WindowCenter' in self.metadata and 'WindowWidth' in self.metadata:
-            image = self.apply_windowing(image, self.metadata['WindowCenter'], self.metadata['WindowWidth'])
-
-        # Convert PIL Image to QPixmap
-        data = image.tobytes("raw", image.mode)  # Get raw image data
-        qimage = QImage(data, image.size[0], image.size[1], QImage.Format_RGB888)  # For RGB example
-        pixmap = QPixmap.fromImage(qimage)
-
-        self.image_label.setPixmap(pixmap)
-        return True
-
-    except Exception as e:
-        logging.error(f"Image conversion error: {str(e)}")
-        return False
-
-def apply_windowing(self, image, window_center, window_width):
-    """Applies DICOM windowing to a Pillow Image."""
-
-    # Calculate minimum and maximum intensity values based on windowing
-    min_intensity = window_center - window_width // 2
-    max_intensity = window_center + window_width // 2
-
-    # Apply linear scaling with clipping
-    def normalize(value):
-        return min(max(value, min_intensity), max_intensity)
-
-    image = image.point(normalize)
-
-    # Convert to 8-bit grayscale (if not already)
-    if image.mode != 'L': 
-        image = image.convert('L')
-
-    return image
-
-
-# ... (Your load_dicom_metadata function, with error handling)
+        ds = pydicom.dcmread(file_path) 
+        return ds  # Return the pydicom dataset object
+    except pydicom.errors.InvalidDicomError:
+        raise  # Re-raise the original exception for handling
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
