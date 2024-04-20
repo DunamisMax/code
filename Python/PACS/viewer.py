@@ -1,6 +1,6 @@
 import sys
 import pydicom
-import config
+
 import logging
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QLabel, QVBoxLayout, 
                              QFileDialog, QMessageBox)

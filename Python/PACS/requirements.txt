@@ -1,0 +1,10 @@
+pydicom>=2.3.0  # Essential for all DICOM interactions
+PyQt5>=5.15  # For your GUI framework
+Pillow>=9.0  # Basic image manipulation
+sqlite3  # Database (assuming you're using SQLite)
+
+# Optional - Uncomment if needed:
+# psycopg2-binary  # For PostgreSQL database
+# mysqlclient  # For MySQL database
+# opencv-python  # For advanced image processing
+# numpy  # Often used with image processing libraries 
