@@ -1,5 +1,5 @@
 import os
-import requests
+from openai import OpenAI
 
 
 def transcribe_audio(
@@ -15,68 +15,66 @@ def transcribe_audio(
     """
     Transcribe audio using the OpenAI Audio API, including specifying a model and additional parameters.
     """
-    url = "https://api.openai.com/v1/audio/transcriptions"
-    headers = {"Authorization": f"Bearer {api_key}"}
-    files = {"file": open(audio_path, "rb")}
-    data = {"model": model}
-
-    if language:
-        data["language"] = language
-    if prompt:
-        data["prompt"] = prompt
-    if response_format:
-        data["response_format"] = response_format
-    if temperature:
-        data["temperature"] = temperature
-    if timestamp_granularities:
-        data["timestamp_granularities[]"] = timestamp_granularities
+    client = OpenAI(api_key=api_key)
 
     try:
-        response = requests.post(url, files=files, headers=headers, data=data)
-        response.raise_for_status()  # This will raise an HTTPError for bad responses
+        with open(audio_path, "rb") as audio_file:
+            options = {
+                "model": model,
+                "response_format": response_format,
+                "temperature": temperature,
+            }
 
-        try:
-            data = response.json()
-            transcription = data.get("text", "No transcription found")
+            if language:
+                options["language"] = language
+            if prompt:
+                options["prompt"] = prompt
+            if timestamp_granularities:
+                options["timestamp_granularities[]"] = timestamp_granularities
+
+            response = client.audio.transcriptions.create(file=audio_file, **options)
+            transcription = response.text  # Accessing the text attribute directly
             return transcription
-        except ValueError as e:
-            print("Error decoding JSON:", e)
-            print("Response content:", response.text[:500])
-            return "Error: Non-JSON response received."
+
     except FileNotFoundError:
-        return "Error: Audio file not found at " + audio_path
-    except requests.exceptions.HTTPError as e:
-        return "HTTP Error: " + str(e) + " | Response content: " + response.text[:500]
-    except requests.exceptions.RequestException as e:
-        return "Request failed: " + str(e)
+        return f"Error: Audio file not found at {audio_path}"
+    except Exception as e:
+        return f"Error: {e}"
+
+
+def save_transcription_to_file(transcription):
+    with open("Transcription.txt", "w") as file:
+        file.write(transcription)
 
 
 def main():
-    api_key = os.getenv(
-        "API_KEY"
-    )  # It's better to use environment variables for API keys
+    api_key = os.getenv("API_KEY")  # Use environment variables for API keys
+    if not api_key:
+        error_message = (
+            "Error: API key not found. Please set the API_KEY environment variable."
+        )
+        print(error_message)
+        save_transcription_to_file(error_message)
+        return
+
     audio_path = input(
         "Enter the path to your audio file (max 25MB): "
-    )  # Dynamically obtain the audio file path
-    model = "whisper-1"  # Use the available model "whisper-1"
-    language = "en"  # Set the language if known, e.g., "en" for English
-    prompt = None  # Optionally provide a prompt to guide the transcription
-    response_format = "json"  # Choose the desired response format
-    temperature = 0  # Set the temperature for random sampling
-    timestamp_granularities = None  # Optionally specify timestamp granularities
+    )  # Obtain the audio file path from user input
 
     transcription = transcribe_audio(
-        api_key,
-        audio_path,
-        model,
-        language,
-        prompt,
-        response_format,
-        temperature,
-        timestamp_granularities,
+        api_key=api_key,
+        audio_path=audio_path,
+        model="whisper-1",  # Use the available model "whisper-1"
+        language="en",  # Set the language if known, e.g., "en" for English
+        prompt=None,  # Optionally provide a prompt to guide the transcription
+        response_format="json",  # Choose the desired response format
+        temperature=0,  # Set the temperature for random sampling
+        timestamp_granularities=None,  # Optionally specify timestamp granularities
     )
+
     print("Transcription or error message:")
     print(transcription)
+    save_transcription_to_file(transcription)
 
 
 if __name__ == "__main__":

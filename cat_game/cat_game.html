@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cat Escape Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: none;
+        }
+        #gameCanvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let catX, catY, catSize;
+        let dogs = [];
+        let shields = [];
+        let score = 0;
+        let gameOver = false;
+        let catSpeed = 5;
+        let dogSpeed = 2;
+        let dogSpawnRate = 0.02;
+        let shieldSpawnRate = 0.002;
+        let hasShield = false;
+
+        // Load images
+        const catImage = new Image();
+        catImage.src = 'cat_image.png';
+        const dogImage = new Image();
+        dogImage.src = 'dog_image.png';
+        const shieldImage = new Image();
+        shieldImage.src = 'shield_image.png';
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            catSize = Math.min(canvas.width, canvas.height) / 10;
+            catX = canvas.width / 2;
+            catY = canvas.height - catSize * 2;
+        }
+
+        function drawCat() {
+            ctx.save();
+            ctx.translate(catX, catY);
+            
+            // Draw cat image
+            ctx.drawImage(catImage, -catSize / 2, -catSize / 2, catSize, catSize);
+
+            // Shield
+            if (hasShield) {
+                ctx.drawImage(shieldImage, -catSize / 1.5, -catSize / 1.5, catSize * 1.5, catSize * 1.5);
+            }
+
+            ctx.restore();
+        }
+
+        function drawDog(dog) {
+            ctx.save();
+            ctx.translate(dog.x, dog.y);
+
+            // Draw dog image
+            ctx.drawImage(dogImage, -catSize / 2, -catSize / 2, catSize, catSize);
+
+            ctx.restore();
+        }
+
+        function drawShield(shield) {
+            ctx.drawImage(shieldImage, shield.x - catSize / 4, shield.y - catSize / 4, catSize / 2, catSize / 2);
+        }
+
+        function updateDogs() {
+            if (Math.random() < dogSpawnRate) {
+                dogs.push({
+                    x: Math.random() * canvas.width,
+                    y: -catSize
+                });
+            }
+
+            for (let i = dogs.length - 1; i >= 0; i--) {
+                dogs[i].y += dogSpeed;
+                if (dogs[i].y > canvas.height) {
+                    dogs.splice(i, 1);
+                    score++;
+                    if (score % 10 === 0) {
+                        increaseDifficulty();
+                    }
+                }
+            }
+        }
+
+        function updateShields() {
+            if (Math.random() < shieldSpawnRate) {
+                shields.push({
+                    x: Math.random() * canvas.width,
+                    y: -catSize
+                });
+            }
+
+            for (let i = shields.length - 1; i >= 0; i--) {
+                shields[i].y += dogSpeed / 2;
+                if (shields[i].y > canvas.height) {
+                    shields.splice(i, 1);
+                }
+            }
+        }
+
+        function increaseDifficulty() {
+            dogSpeed += 0.5;
+            dogSpawnRate = Math.min(dogSpawnRate + 0.005, 0.1);
+        }
+
+        function checkCollision() {
+            for (let i = dogs.length - 1; i >= 0; i--) {
+                const dx = dogs[i].x - catX;
+                const dy = dogs[i].y - catY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < catSize) {
+                    if (hasShield) {
+                        hasShield = false;
+                        dogs.splice(i, 1);
+                    } else {
+                        gameOver = true;
+                    }
+                }
+            }
+
+            for (let i = shields.length - 1; i >= 0; i--) {
+                const dx = shields[i].x - catX;
+                const dy = shields[i].y - catY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < catSize) {
+                    hasShield = true;
+                    shields.splice(i, 1);
+                }
+            }
+        }
+
+        function drawScore() {
+            ctx.fillStyle = 'black';
+            ctx.font = '20px Arial';
+            ctx.fillText(`Score: ${score}`, 10, 30);
+        }
+
+        let keys = {};
+
+        function handleKeyDown(e) {
+            keys[e.code] = true;
+        }
+
+        function handleKeyUp(e) {
+            keys[e.code] = false;
+        }
+
+        function updateCatPosition() {
+            if (keys['ArrowLeft'] && catX > catSize / 2) catX -= catSpeed;
+            if (keys['ArrowRight'] && catX < canvas.width - catSize / 2) catX += catSpeed;
+            if (keys['ArrowUp'] && catY > catSize / 2) catY -= catSpeed;
+            if (keys['ArrowDown'] && catY < canvas.height - catSize / 2) catY += catSpeed;
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            catX = touch.clientX;
+            catY = touch.clientY;
+        }
+
+        function gameLoop() {
+            // Set the background color
+            ctx.fillStyle = 'lightblue';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            if (!gameOver) {
+                updateCatPosition();
+                updateDogs();
+                updateShields();
+                checkCollision();
+                drawCat();
+                dogs.forEach(drawDog);
+                shields.forEach(drawShield);
+                drawScore();
+                requestAnimationFrame(gameLoop);
+            } else {
+                ctx.fillStyle = 'red';
+                ctx.font = '40px Arial';
+                ctx.fillText('Game Over!', canvas.width / 2 - 100, canvas.height / 2);
+                ctx.fillText(`Final Score: ${score}`, canvas.width / 2 - 100, canvas.height / 2 + 50);
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        canvas.addEventListener('touchmove', handleTouchMove);
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
+
+        resizeCanvas();
+        gameLoop();
+    </script>
+</body>
+</html>
